@@ -1,11 +1,11 @@
 import './App.css'
-import ChessTutorPage from './Pages/ChessTutorPage/ChessTutorPage'
+import ChessTutorPage from './pages/ChessTutorPage/ChessTutorPage'
 
 
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="Routes">
       <ChessTutorPage />
     </div>
   );
