@@ -28,13 +28,16 @@ export function ChessTutorGame() {
   const [difficulty, setDifficulty] = useState(0);
 
   // A stack to hold moves that have been undone, for the 'Redo' feature.
-  const [redoStack, setRedoStack] = useState<Move[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+
+  // Add this to your state declarations at the top
+  const [fenHistory, setFenHistory] = useState<string[]>([game.fen()]);
 
   // ----------------------------------------------------------------
   // CORE GAME LOGIC
   // ----------------------------------------------------------------
 
-/**
+  /**
    * This function is called when it's the AI's turn to move.
    * It uses js-chess-engine to calculate a move based on the
    * current difficulty and FEN.
@@ -84,6 +87,7 @@ export function ChessTutorGame() {
       // 6. Update our game state and FEN.
       setGame(gameCopy);
       setFen(gameCopy.fen());
+      setFenHistory(prev => [...prev, gameCopy.fen()]);
       setRedoStack([]);
     } else {
       // This should not happen now, but it's a good safety log.
@@ -137,10 +141,9 @@ export function ChessTutorGame() {
       return false; // Tell react-chessboard the move was invalid.
     }
 
-    // 5. If the move is valid, update our state.
     setGame(gameCopy);
     setFen(gameCopy.fen());
-    // A new move means the redo stack is no longer valid.
+    setFenHistory(prev => [...prev, gameCopy.fen()]);
     setRedoStack([]);
     return true; // Tell react-chessboard the move was successful.
   }
@@ -158,42 +161,49 @@ export function ChessTutorGame() {
     setFen(newGame.fen());
     setPlayerColor('w');
     setRedoStack([]);
+    setFenHistory([newGame.fen()]);
   }
 
   /**
-   * Undoes the last move.
+   * Undoes the last two moves (player + AI).
    */
   function handleUndo() {
-    const gameCopy = new Chess(game.fen());
-    const undoneMove = gameCopy.undo();
-
-    // If a move was successfully undone...
-    if (undoneMove) {
-      // 1. Push the undone move onto the redo stack.
-      setRedoStack([undoneMove, ...redoStack]);
-      // 2. Update the game state.
-      setGame(gameCopy);
-      setFen(gameCopy.fen());
-    }
-  }
+    // Need at least 3 positions to undo (initial + player move + AI move)
+    if (fenHistory.length <= 2) return;
+    
+    // Go back two moves (player + AI)
+    const previousFen = fenHistory[fenHistory.length - 3];
+    const newGame = new Chess(previousFen);
+    
+    // Store the two undone positions in the redo stack
+    const movedUndone = [
+        fenHistory[fenHistory.length - 1], // AI move
+        fenHistory[fenHistory.length - 2], // Player move
+    ];
+    
+    setRedoStack(prev => [...movedUndone, ...prev]);
+    setFenHistory(prev => prev.slice(0, -2));
+    setGame(newGame);
+    setFen(previousFen);
+}
 
   /**
-   * Redoes the last undone move.
+   * Redoes the last two moves (player + AI).
    */
   function handleRedo() {
-    // 1. Check if there's anything in the redo stack.
-    if (redoStack.length > 0) {
-      const [moveToRedo, ...remainingStack] = redoStack;
-      const gameCopy = new Chess(game.fen());
-
-      // 2. Apply the move back to the game.
-      gameCopy.move(moveToRedo);
-
-      // 3. Update the state.
-      setGame(gameCopy);
-      setFen(gameCopy.fen());
-      setRedoStack(remainingStack);
-    }
+    // Need at least 2 positions in the redo stack (player + AI moves)
+    if (redoStack.length < 2) return;
+    
+    // Get the two moves to redo
+    const [aiMove, playerMove, ...remainingStack] = redoStack;
+    
+    // Restore the position after both moves
+    const newGame = new Chess(aiMove);
+    
+    setGame(newGame);
+    setFen(aiMove);
+    setFenHistory(prev => [...prev, playerMove, aiMove]);
+    setRedoStack(remainingStack);
   }
 
   /**
@@ -239,33 +249,17 @@ export function ChessTutorGame() {
   // ----------------------------------------------------------------
   return (
     <div style={styles.container}>
-      {/* The Chessboard UI Component */}
-      <div style={styles.boardContainer}>
-        <Chessboard
-        options = {{
-          id: "ChessTutorBoard",
-          position: fen,
-          onPieceDrop: ({ sourceSquare, targetSquare }) => {
-            if (!sourceSquare || !targetSquare) return false;
-            return onPieceDrop(sourceSquare, targetSquare);
-          },
-          boardOrientation: "white",
-        }}
-      />
-      </div>
+      
 
       {/* The Control Panel */}
       <div style={styles.controlsContainer}>
         <h2 style={styles.status}>{getGameStatus()}</h2>
 
         <div style={styles.buttonGroup}>
-          <button style={styles.button} onClick={handleNewGame}>
-            New Game
-          </button>
           <button
             style={styles.button}
             onClick={handleUndo}
-            disabled={game.history().length === 0}
+            disabled={fenHistory.length <= 2} // Changed from game.history().length === 0
           >
             Undo
           </button>
@@ -275,6 +269,9 @@ export function ChessTutorGame() {
             disabled={redoStack.length === 0}
           >
             Redo
+          </button>
+          <button style={styles.button} onClick={handleNewGame}>
+            New Game
           </button>
           <button style={styles.button} onClick={handleSwapSides}>
             Swap Sides (Play as {playerColor === 'w' ? 'Black' : 'White'})
@@ -298,6 +295,23 @@ export function ChessTutorGame() {
             <option value={4}>Level 4 (Expert)</option>
           </select>
         </div>
+      </div>
+
+      {/* The Chessboard UI Component */}
+      <div style={styles.boardContainer}>
+        <Chessboard
+        options = {{
+          id: "ChessTutorBoard",
+          position: fen,
+          onPieceDrop: ({ sourceSquare, targetSquare }) => {
+            if (!sourceSquare || !targetSquare) return false;
+            return onPieceDrop(sourceSquare, targetSquare);
+          },
+          // Flip the board when the player swaps sides. chessboard expects
+          // the strings "white" or "black"; our state uses 'w'|'b'.
+          boardOrientation: playerColor === 'w' ? 'white' : 'black',
+        }}
+      />
       </div>
     </div>
   );
