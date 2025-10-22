@@ -4,22 +4,29 @@ import { Chess, Move } from 'chess.js'; // Logic, state, and type import
 // @ts-ignore: no type declarations available for 'js-chess-engine'
 import { Game as AiGame } from 'js-chess-engine'; // The AI engine
 
+interface ChessTutorGameProps {
+  game: Chess;
+  setGame: (game: Chess) => void;
+  fen: string;
+  setFen: (fen: string) => void;
+}
+
 /**
  * A complete, self-contained chess tutor component.
  * It integrates react-chessboard (UI), chess.js (logic),
  * and js-chess-engine (AI) to provide all the requested features.
  */
-export function ChessTutorGame() {
+export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGameProps) {
   // ----------------------------------------------------------------
   // STATE MANAGEMENT
   // ----------------------------------------------------------------
 
   // Main game state from chess.js. Used for logic, validation, and history.
-  const [game, setGame] = useState(new Chess());
+//   const [game, setGame] = useState(new Chess());
 
   // Current FEN string. This is what react-chessboard actually displays.
   // We keep this separate from 'game' to trigger re-renders properly.
-  const [fen, setFen] = useState(game.fen());
+//   const [fen, setFen] = useState(game.fen());
 
   // The player's current color. 'w' or 'b'.
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
