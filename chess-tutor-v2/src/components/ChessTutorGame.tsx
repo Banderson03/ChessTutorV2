@@ -9,6 +9,9 @@ interface ChessTutorGameProps {
   setGame: (game: Chess) => void;
   fen: string;
   setFen: (fen: string) => void;
+  actualMovesPlayed: string[];
+  setActualMovesPlayed: React.Dispatch<React.SetStateAction<string[]>>;
+  onGameComplete?: (moves: string[]) => void; // Changed to pass moves array
 }
 
 /**
@@ -16,7 +19,15 @@ interface ChessTutorGameProps {
  * It integrates react-chessboard (UI), chess.js (logic),
  * and js-chess-engine (AI) to provide all the requested features.
  */
-export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGameProps) {
+export function ChessTutorGame({ 
+  game, 
+  setGame, 
+  fen, 
+  setFen,
+  actualMovesPlayed,
+  setActualMovesPlayed,
+  onGameComplete 
+}: ChessTutorGameProps) {
   // ----------------------------------------------------------------
   // STATE MANAGEMENT
   // ----------------------------------------------------------------
@@ -96,6 +107,7 @@ export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGamePr
       setFen(gameCopy.fen());
       setFenHistory(prev => [...prev, gameCopy.fen()]);
       setRedoStack([]);
+      setActualMovesPlayed(prev => [...prev, moveResult.san]);
     } else {
       // This should not happen now, but it's a good safety log.
       console.error(
@@ -103,7 +115,7 @@ export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGamePr
         moveForChessJs
       );
     }
-  }, [game, difficulty]);
+  }, [game, difficulty, setActualMovesPlayed]);
 
   /**
    * This useEffect hook is the main game loop.
@@ -111,17 +123,21 @@ export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGamePr
    * It checks if it's the AI's turn and, if so, triggers its move.
    */
   useEffect(() => {
-    // Is the game still going, AND is it the AI's turn?
+    if (game.isGameOver()) {
+      // Game just ended, pass the actual moves played for analysis
+      if (onGameComplete) {
+        onGameComplete(actualMovesPlayed);
+      }
+      return;
+    }
+
     if (!game.isGameOver() && game.turn() !== playerColor) {
-      // Add a slight delay for a more natural feel.
       const timer = setTimeout(() => {
         makeAiMove();
-      }, 500); // 0.5 second delay
-
-      // Cleanup function to clear the timer if the component unmounts.
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, [fen, playerColor, game, makeAiMove]); // Rerun when FEN or player color changes
+  }, [fen, playerColor, game, makeAiMove, onGameComplete, actualMovesPlayed]);
 
   /**
    * This handler is called by react-chessboard when the
@@ -152,6 +168,8 @@ export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGamePr
     setFen(gameCopy.fen());
     setFenHistory(prev => [...prev, gameCopy.fen()]);
     setRedoStack([]);
+    setActualMovesPlayed(prev => [...prev, move.san]);
+
     return true; // Tell react-chessboard the move was successful.
   }
 
@@ -169,6 +187,7 @@ export function ChessTutorGame( { game, setGame, fen, setFen }: ChessTutorGamePr
     setPlayerColor('w');
     setRedoStack([]);
     setFenHistory([newGame.fen()]);
+    setActualMovesPlayed([]);
   }
 
   /**

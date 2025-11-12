@@ -10,11 +10,7 @@ interface Message {
   timestamp: Date;
 }
 
-interface StockfishMove {
-  move: string;
-  score: number;
-  depth: number;
-}
+// The StockfishMove interface has been removed.
 
 interface ChessAiTutorProps {
   currentFen: string;
@@ -24,116 +20,39 @@ interface ChessAiTutorProps {
 
 /**
  * ChessAiTutor Component
- * 
+ *
  * Provides AI-powered chess tutoring by:
- * 1. Analyzing positions with Stockfish
- * 2. Getting educational explanations from OpenAI
- * 3. Allowing students to ask questions about chess
+ * 1. Calling /api/get-tutor-hint for position analysis
+ * 2. Calling /api/chess-tutor for general chat
  */
-export function ChessAiTutor({ currentFen, game, onMoveSelect }: ChessAiTutorProps) {
+export function ChessAiTutor({
+  currentFen,
+  game,
+  onMoveSelect,
+}: ChessAiTutorProps) {
   // ----------------------------------------------------------------
   // STATE MANAGEMENT
   // ----------------------------------------------------------------
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [stockfish, setStockfish] = useState<Worker | null>(null);
-  const [topMoves, setTopMoves] = useState<StockfishMove[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+
+  // All Stockfish-related states (stockfish, topMoves, isAnalyzing) have been removed.
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // ----------------------------------------------------------------
-  // STOCKFISH INITIALIZATION
+  // STOCKFISH INITIALIZATION (REMOVED)
   // ----------------------------------------------------------------
-
-  useEffect(() => {
-    // Initialize Stockfish Web Worker
-    // You'll need to have stockfish.js in your public folder
-    const sf = new Worker('/stockfish.js');
-    
-    sf.postMessage('uci');
-    
-    sf.onmessage = (event) => {
-      handleStockfishMessage(event.data);
-    };
-    
-    setStockfish(sf);
-    
-    return () => {
-      sf.terminate();
-    };
-  }, []);
+  // The useEffect for the Stockfish worker has been removed.
 
   // ----------------------------------------------------------------
-  // STOCKFISH ANALYSIS
+  // STOCKFISH ANALYSIS (REMOVED)
   // ----------------------------------------------------------------
-
-  /**
-   * Analyzes the current position and gets top 3-5 moves
-   */
-  const analyzePosition = async () => {
-    if (!stockfish || isAnalyzing) return;
-    
-    setIsAnalyzing(true);
-    const moves: StockfishMove[] = [];
-    
-    // Request Stockfish to analyze
-    stockfish.postMessage(`position fen ${currentFen}`);
-    stockfish.postMessage('go depth 15 multipv 5'); // Get top 5 moves
-    
-    // Wait for analysis to complete (you'll need to implement proper message handling)
-    // This is a simplified version
-    setTimeout(() => {
-      setIsAnalyzing(false);
-    }, 3000);
-  };
-
-  /**
-   * Handles messages from Stockfish worker
-   */
-  const handleStockfishMessage = (message: string) => {
-    // Parse Stockfish output
-    if (message.includes('info') && message.includes('pv')) {
-      const parts = message.split(' ');
-      const pvIndex = parts.indexOf('pv');
-      const scoreIndex = parts.indexOf('cp') !== -1 ? parts.indexOf('cp') : parts.indexOf('mate');
-      
-      if (pvIndex !== -1 && scoreIndex !== -1) {
-        const move = parts[pvIndex + 1];
-        const score = parseInt(parts[scoreIndex + 1]);
-        const depthIndex = parts.indexOf('depth');
-        const depth = depthIndex !== -1 ? parseInt(parts[depthIndex + 1]) : 0;
-        
-        setTopMoves(prev => {
-          const existing = prev.find(m => m.move === move);
-          if (!existing && prev.length < 5) {
-            return [...prev, { move, score, depth }].sort((a, b) => b.score - a.score);
-          }
-          return prev;
-        });
-      }
-    }
-  };
-
-  /**
-   * Converts algebraic notation to readable format
-   */
-  const formatMove = (move: string): string => {
-    try {
-      const gameCopy = new Chess(currentFen);
-      const moveObj = gameCopy.move({
-        from: move.slice(0, 2),
-        to: move.slice(2, 4),
-        promotion: move.length > 4 ? move[4] : undefined
-      });
-      return moveObj ? moveObj.san : move;
-    } catch {
-      return move;
-    }
-  };
+  // The analyzePosition, handleStockfishMessage, and formatMove functions
+  // have been removed. They are now handled on the server.
 
   // ----------------------------------------------------------------
   // OPENAI INTEGRATION
@@ -141,55 +60,31 @@ export function ChessAiTutor({ currentFen, game, onMoveSelect }: ChessAiTutorPro
 
   /**
    * Gets AI tutoring explanation for the current position
+   * by calling our "smart" backend API route.
    */
   const getPositionAnalysis = async () => {
-    if (topMoves.length === 0) {
-      await analyzePosition();
-      // Wait a bit for Stockfish to finish
-      await new Promise(resolve => setTimeout(resolve, 3500));
-    }
-
     setIsLoading(true);
 
-    const formattedMoves = topMoves.slice(0, 3).map((m, i) => 
-      `${i + 1}. ${formatMove(m.move)} (evaluation: ${(m.score / 100).toFixed(2)})`
-    ).join('\n');
-
-    const prompt = `You are a chess tutor helping a beginner understand their position. 
-
-Current Position (FEN): ${currentFen}
-Turn to move: ${game.turn() === 'w' ? 'White' : 'Black'}
-${game.inCheck() ? 'The king is in check!' : ''}
-
-Top moves according to analysis:
-${formattedMoves}
-
-Please explain:
-1. A brief overview of the current position (1-2 sentences)
-2. The top 2-3 candidate moves and WHY each is strong (compare offensive vs defensive qualities, tactical vs positional)
-3. Key things the player should be thinking about
-
-Keep it educational but concise (under 200 words). Focus on teaching concepts, not just listing moves.`;
-
     try {
+      // Call your new "smart" endpoint
       const response = await fetch('/api/chess-tutor', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        // Send the raw data your API needs
         body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert chess tutor who explains concepts clearly and concisely to beginners. You focus on the "why" behind moves, comparing strategic approaches.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ]
-        })
+          fen: currentFen,
+          turn: game.turn(),
+          inCheck: game.inCheck(),
+        }),
       });
+
+      if (!response.ok) {
+        // Handle errors from your API
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to get analysis from server');
+      }
 
       const data = await response.json();
       const aiResponse = data.message;
@@ -197,19 +92,19 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
       const assistantMessage: Message = {
         role: 'assistant',
         content: aiResponse,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
-      setTopMoves([]); // Reset for next analysis
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error getting AI response:', error);
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Sorry, I encountered an error analyzing the position. Please try again.',
-        timestamp: new Date()
+        content:
+          'Sorry, I encountered an error analyzing the position. Please try again.',
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -217,15 +112,16 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
 
   /**
    * Handles general chess questions from the user
+   * (This function is UNCHANGED and correctly calls /api/chess-tutor)
    */
   const handleUserMessage = async (message: string) => {
     const userMessage: Message = {
       role: 'user',
       content: message,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
@@ -239,12 +135,14 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
           messages: [
             {
               role: 'system',
-              content: `You are an expert chess tutor. The current position is: ${currentFen}. The player is ${game.turn() === 'w' ? 'White' : 'Black'} to move. Answer questions clearly and educationally, keeping responses under 150 words unless a detailed explanation is specifically requested.`
+              content: `You are an expert chess tutor. The current position is: ${currentFen}. The player is ${
+                game.turn() === 'w' ? 'White' : 'Black'
+              } to move. Answer questions clearly and educationally, keeping responses under 150 words unless a detailed explanation is specifically requested.`,
             },
-            ...messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: message }
-          ]
-        })
+            ...messages.slice(-6).map((m) => ({ role: m.role, content: m.content })),
+            { role: 'user', content: message },
+          ],
+        }),
       });
 
       const data = await response.json();
@@ -253,18 +151,18 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
       const assistantMessage: Message = {
         role: 'assistant',
         content: aiResponse,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error getting AI response:', error);
       const errorMessage: Message = {
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -285,9 +183,9 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
     const hintMessage: Message = {
       role: 'user',
       content: '🎯 Requesting position analysis...',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setMessages(prev => [...prev, hintMessage]);
+    setMessages((prev) => [...prev, hintMessage]);
     getPositionAnalysis();
   };
 
@@ -304,12 +202,12 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
     <div style={styles.container}>
       <div style={styles.header}>
         <h3 style={styles.title}>♟️ Chess Tutor AI</h3>
-        <button 
+        <button
           style={styles.hintButton}
           onClick={handleHintRequest}
-          disabled={isLoading || isAnalyzing}
+          disabled={isLoading} // Updated
         >
-          {isAnalyzing ? 'Analyzing...' : isLoading ? 'Thinking...' : '💡 Get Hint'}
+          {isLoading ? 'Thinking...' : '💡 Get Hint'} 
         </button>
       </div>
 
@@ -317,30 +215,36 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
         {messages.length === 0 && (
           <div style={styles.welcomeMessage}>
             <p>👋 Welcome! I'm your chess tutor.</p>
-            <p>Click "Get Hint" to analyze the current position, or ask me any chess questions!</p>
+            <p>
+              Click "Get Hint" to analyze the current position, or ask me any
+              chess questions!
+            </p>
           </div>
         )}
-        
+
         {messages.map((msg, index) => (
           <div
             key={index}
             style={{
               ...styles.message,
-              ...(msg.role === 'user' ? styles.userMessage : styles.assistantMessage)
+              ...(msg.role === 'user'
+                ? styles.userMessage
+                : styles.assistantMessage),
             }}
           >
             <div style={styles.messageHeader}>
               <strong>{msg.role === 'user' ? 'You' : '🤖 Tutor'}</strong>
               <span style={styles.timestamp}>
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {msg.timestamp.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </span>
             </div>
-            <div style={styles.messageContent}>
-              {msg.content}
-            </div>
+            <div style={styles.messageContent}>{msg.content}</div>
           </div>
         ))}
-        
+
         {isLoading && (
           <div style={styles.loadingIndicator}>
             <div style={styles.typingDot}></div>
@@ -348,7 +252,7 @@ Keep it educational but concise (under 200 words). Focus on teaching concepts, n
             <div style={styles.typingDot}></div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
