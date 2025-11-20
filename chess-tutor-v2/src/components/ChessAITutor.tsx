@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 
-/**
- * Type definitions for our chess tutor
- */
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
 }
-
-// The StockfishMove interface has been removed.
 
 interface ChessAiTutorProps {
   currentFen: string;
@@ -18,93 +13,157 @@ interface ChessAiTutorProps {
   onMoveSelect?: (move: string) => void;
 }
 
-/**
- * ChessAiTutor Component
- *
- * Provides AI-powered chess tutoring by:
- * 1. Calling /api/get-tutor-hint for position analysis
- * 2. Calling /api/chess-tutor for general chat
- */
 export function ChessAiTutor({
   currentFen,
   game,
   onMoveSelect,
 }: ChessAiTutorProps) {
-  // ----------------------------------------------------------------
-  // STATE MANAGEMENT
-  // ----------------------------------------------------------------
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // All Stockfish-related states (stockfish, topMoves, isAnalyzing) have been removed.
-
+  
+  // Ref to hold the worker instance
+  const stockfishRef = useRef<Worker | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // ----------------------------------------------------------------
-  // STOCKFISH INITIALIZATION (REMOVED)
+  // 1. INITIALIZE LOCAL STOCKFISH WORKER
   // ----------------------------------------------------------------
-  // The useEffect for the Stockfish worker has been removed.
+  useEffect(() => {
+    // pointing to the file in public/stockfish/
+    stockfishRef.current = new Worker('/stockfish/stockfish-17.1-lite-single-03e3232.js');
+    
+    stockfishRef.current.postMessage('uci');
+    // Set MultiPV to 3 to get top 3 moves
+    stockfishRef.current.postMessage('setoption name MultiPV value 3'); 
+
+    return () => {
+      stockfishRef.current?.terminate();
+    };
+  }, []);
 
   // ----------------------------------------------------------------
-  // STOCKFISH ANALYSIS (REMOVED)
+  // 2. HELPER: ANALYZE POSITION LOCALLY
   // ----------------------------------------------------------------
-  // The analyzePosition, handleStockfishMessage, and formatMove functions
-  // have been removed. They are now handled on the server.
+  const analyzeWithStockfish = (fen: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const worker = stockfishRef.current;
+      if (!worker) {
+        resolve("Analysis unavailable (engine not loaded).");
+        return;
+      }
+
+      let topLines: string[] = [];
+
+      // Listener for this specific analysis run
+      const handler = (e: MessageEvent) => {
+        const msg = e.data;
+
+        // We look for 'info' lines that have 'pv' (principal variation)
+        // and are at a decent depth (e.g., depth 15 is fast and good enough for beginners)
+        if (msg.startsWith('info') && msg.includes('pv')) {
+            // Simple parsing to store the latest info lines
+            // In a real app, you might parse 'multipv' index to ensure you have distinct lines
+            // but for simplicity, we just capture the string here.
+            
+            // We stop listening when we get the 'bestmove' command
+        }
+
+        if (msg.startsWith('bestmove')) {
+          worker.removeEventListener('message', handler);
+          
+          // Formatting the captured lines into a readable string for the LLM
+          // Note: In a production app, you'd want to parse the specific 'score' and 'pv' 
+          // from the 'info' messages stored in `topLines`.
+          // For now, we will request a simple evaluation.
+          resolve(topLines.join('\n')); 
+        }
+      };
+
+      // A cleaner approach for the LLM context:
+      // We will collect the output of the engine for 1-2 seconds or until depth 12
+      const lines: Map<number, string> = new Map();
+      
+      worker.onmessage = (e) => {
+        const msg = e.data;
+        // Parse multipv lines: "info depth 10 ... multipv 1 score cp 50 ... pv e2e4 e7e5"
+        if (msg.startsWith('info') && msg.includes('depth') && msg.includes('pv')) {
+            const multipvMatch = msg.match(/multipv (\d+)/);
+            const multipv = multipvMatch ? parseInt(multipvMatch[1]) : 1;
+            
+            // Only update if depth is reasonable (e.g., > 8)
+            lines.set(multipv, msg);
+        }
+
+        if (msg.startsWith('bestmove')) {
+           // Convert raw UCI lines to readable text for LLM
+           const formattedAnalysis = Array.from(lines.values()).map(line => {
+             // Extract Move
+             const pvMatch = line.match(/ pv (.*)/);
+             const moves = pvMatch ? pvMatch[1].split(' ').slice(0, 4).join(' ') : 'unknown';
+             
+             // Extract Score
+             const scoreMatch = line.match(/score cp (-?\d+)/);
+             const mateMatch = line.match(/score mate (-?\d+)/);
+             let score = '0.0';
+             if (mateMatch) score = `Mate in ${mateMatch[1]}`;
+             else if (scoreMatch) score = (parseInt(scoreMatch[1]) / 100).toFixed(2);
+             
+             return `Line: ${moves}... (Eval: ${score})`;
+           }).join('\n');
+
+           resolve(formattedAnalysis || "No clear advantage found.");
+           // Cleanup usually happens here, but we reuse the worker
+        }
+      };
+
+      worker.postMessage(`position fen ${fen}`);
+      // Depth 15 is fast and plenty strong for a tutor
+      worker.postMessage('go depth 15'); 
+    });
+  };
 
   // ----------------------------------------------------------------
-  // OPENAI INTEGRATION
+  // 3. INTEGRATION: GET HINT
   // ----------------------------------------------------------------
-
-  /**
-   * Gets AI tutoring explanation for the current position
-   * by calling our "smart" backend API route.
-   */
   const getPositionAnalysis = async () => {
     setIsLoading(true);
 
     try {
-      // Call your new "smart" endpoint
+      // A. Run Local Stockfish First
+      const stockfishAnalysis = await analyzeWithStockfish(currentFen);
+
+      // B. Send FEN + Local Analysis to OpenAI
       const response = await fetch('/api/chess-tutor', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Send the raw data your API needs
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fen: currentFen,
           turn: game.turn(),
           inCheck: game.inCheck(),
+          // PASS THE LOCAL ANALYSIS HERE
+          stockfishAnalysis: stockfishAnalysis 
         }),
       });
 
-      if (!response.ok) {
-        // Handle errors from your API
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to get analysis from server');
-      }
+      if (!response.ok) throw new Error('Failed to get analysis');
 
       const data = await response.json();
-      const aiResponse = data.message;
-
-      const assistantMessage: Message = {
+      
+      setMessages((prev) => [...prev, {
         role: 'assistant',
-        content: aiResponse,
+        content: data.message,
         timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      }]);
     } catch (error) {
-      console.error('Error getting AI response:', error);
-      const errorMessage: Message = {
+      console.error('Error:', error);
+      setMessages((prev) => [...prev, {
         role: 'assistant',
-        content:
-          'Sorry, I encountered an error analyzing the position. Please try again.',
+        content: 'I had trouble analyzing that position. Please try again.',
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      }]);
     } finally {
       setIsLoading(false);
     }
