@@ -53,6 +53,13 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+.chess-ai-input::placeholder {
+  color: #2c3e50;
+  opacity: 1;
+}
+
+.chess-ai-input:-ms-input-placeholder { color: white; }
+.chess-ai-input::-ms-input-placeholder { color: white; }
 
 @media (prefers-color-scheme: light) {
   :root {

@@ -235,7 +235,7 @@ export function ChessAiTutor({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h3 style={styles.title}>♟️ Chess Tutor AI</h3>
+        <h3 style={styles.title}>Chess Tutor AI</h3>
         <button
           style={styles.hintButton}
           onClick={handleHintRequest}
@@ -292,12 +292,14 @@ export function ChessAiTutor({
 
       <form onSubmit={handleSendMessage} style={styles.inputForm}>
         <input
+          className='chess-ai-input'
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="Ask about chess strategies, tactics, openings..."
           style={styles.input}
           disabled={isLoading}
+          
         />
         <button
           type="submit"
@@ -319,9 +321,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    width: '100%',
-    maxWidth: '500px',
-    height: '600px',
+    width: '420px',
+    height: '540px',
     backgroundColor: '#f8f9fa',
     borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -332,7 +333,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '16px 20px',
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#4e3a2b',
     color: 'white',
   },
   title: {
@@ -426,11 +427,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: '1px solid #ddd',
     borderRadius: '8px',
     outline: 'none',
+    backgroundColor: '#dba477',
+    color: 'black' 
   },
   sendButton: {
     padding: '12px 24px',
     fontSize: '1rem',
-    backgroundColor: '#3498db',
+    backgroundColor: '#b58863',
     color: 'white',
     border: 'none',
     borderRadius: '8px',

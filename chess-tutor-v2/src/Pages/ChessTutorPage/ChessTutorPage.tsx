@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Chess } from 'chess.js';
 import ChessTutorGame from "../../components/ChessTutorGame";
-import ChessAITutor from "../../components/ChessAITutor";
+import ChessAiTutor from "../../components/ChessAITutor"; 
 import GameAnalysisPanel from "../../components/GameAnalysisPanel";
 
 export function ChessTutorPage() {
@@ -18,23 +18,41 @@ export function ChessTutorPage() {
 
     return (
         <div style={{ padding: '20px' }}>
-            <h1>Chess Tutor Page</h1>
+            <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Chess Tutor Page</h1>
             
-            <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
-                <ChessTutorGame 
-                    game={game} 
-                    setGame={setGame}
-                    fen={fen}
-                    setFen={setFen}
-                    actualMovesPlayed={actualMovesPlayed}
-                    setActualMovesPlayed={setActualMovesPlayed}
-                    onGameComplete={handleGameComplete}
-                />
+            {/* MAIN LAYOUT CONTAINER */}
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'row',
+                alignItems: 'flex-start', 
+                justifyContent: 'center', // Centers the whole group
+                gap: '20px'
+            }}>
                 
-                <ChessAITutor 
-                    currentFen={fen} 
-                    game={game}
-                />
+                {/* 1. The Game (Controls + Board) */}
+                {/* We use flex-shrink-0 to prevent the board from crushing if screen is tight */}
+                <div style={{ flexShrink: 0 }}>
+                    <ChessTutorGame 
+                        game={game} 
+                        setGame={setGame}
+                        fen={fen}
+                        setFen={setFen}
+                        actualMovesPlayed={actualMovesPlayed}
+                        setActualMovesPlayed={setActualMovesPlayed}
+                        onGameComplete={handleGameComplete}
+                    />
+                </div>
+                
+                {/* 2. The AI Tutor */}
+                <div style={{ 
+                    width: '380px', 
+                    flexShrink: 0, // Keeps the tutor width fixed
+                }}>
+                    <ChessAiTutor 
+                        currentFen={fen} 
+                        game={game}
+                    />
+                </div>
             </div>
 
             {showAnalysis && completedGameMoves.length > 0 && (

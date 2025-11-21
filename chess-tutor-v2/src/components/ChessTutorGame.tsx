@@ -273,13 +273,19 @@ export function ChessTutorGame({
   // ----------------------------------------------------------------
   // RENDER (JSX)
   // ----------------------------------------------------------------
+
+  // Set status text color: white when White to move, black when Black to move, otherwise white
+  const statusColor = game.turn() === 'w' ? 'white' : game.turn() === 'b' ? 'black' : 'white';
+
   return (
     <div style={styles.container}>
       
 
       {/* The Control Panel */}
       <div style={styles.controlsContainer}>
-        <h2 style={styles.status}>{getGameStatus()}</h2>
+        <div style={styles.statusCard} >
+          <h2 style={{ ...styles.status, color: statusColor }}>{getGameStatus()}</h2>
+        </div>
 
         <div style={styles.buttonGroup}>
           <button
@@ -300,7 +306,7 @@ export function ChessTutorGame({
             New Game
           </button>
           <button style={styles.button} onClick={handleSwapSides}>
-            Swap Sides (Play as {playerColor === 'w' ? 'Black' : 'White'})
+            Swap Sides<br></br>(Play as {playerColor === 'w' ? 'Black' : 'White'})
           </button>
         </div>
 
@@ -348,30 +354,41 @@ export function ChessTutorGame({
 // (Just some basic CSS-in-JS to make it look nice)
 // ----------------------------------------------------------------
 
+// In ChessTutorGame.tsx
+
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
     fontFamily: 'sans-serif',
-    padding: '20px',
-    gap: '30px',
+    gap: '30px',              // Increased gap for better separation
+    alignItems: 'flex-start',
   },
   boardContainer: {
-    width: 'min(90vw, 500px)',
+    width: '500px',           // Board stays fixed
+    maxWidth: '90vw',
+    backgroundColor: '#4e3a2b',
+    padding: '20px',
+    borderRadius: '12px',
+    flexShrink: 0,
   },
   controlsContainer: {
-    width: '300px',
+    // 1. MATCH WIDTH: This must match the width of the AI Tutor exactly
+    width: '380px',           
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    gap: '40px',
+    flexShrink: 0,
+    padding: '20px',
+    backgroundColor: '#4e3a2b',
+    borderRadius: '12px',
+    minHeight: '500px'
   },
   status: {
     fontSize: '1.25rem',
     fontWeight: 'bold',
     textAlign: 'center',
-    minHeight: '50px',
+    minHeight: '30px',
   },
   buttonGroup: {
     display: 'grid',
@@ -380,10 +397,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   button: {
     padding: '12px',
-    fontSize: '1rem',
+    fontSize: '1.25rem',
+    fontWeight: 'bold',
     border: 'none',
     borderRadius: '4px',
-    backgroundColor: '#4a4a4a',
+    backgroundColor: '#b58863',
     color: 'white',
     cursor: 'pointer',
     transition: 'background-color 0.2s',
@@ -402,7 +420,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '1rem',
     borderRadius: '4px',
     border: '1px solid #ccc',
+    backgroundColor: '#b58863'
   },
+  statusCard: {
+    backgroundColor: '#b58863',
+    borderRadius: '4px',
+    marginBottom: '20px'
+  }
 };
 
 // Add this line if you're using this as a module
