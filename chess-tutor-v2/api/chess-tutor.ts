@@ -41,13 +41,13 @@ Current Position (FEN): ${fen}
 Turn to move: ${turn === 'w' ? 'White' : 'Black'}
 ${inCheck ? 'The king is in check!' : ''}
 
-Engine Analysis (Top moves):
+Top moves according to analysis:
 ${stockfishAnalysis}
 
 Please explain:
-1. A brief overview of the position.
-2. The best move and why it's good (explain the tactics or strategy).
-3. What the opponent might be threatening.
+1. A brief overview of the current position (1-2 sentences).
+2. The top 2-3 candidate moves and WHY each is strong (compare offensive vs defensive, tactical vs positional).
+3. The main threat or opportunity the player should be thinking about.
 
 Keep it under 150 words.`;
 

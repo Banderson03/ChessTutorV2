@@ -32,11 +32,11 @@ export function ChessAiTutor({
   // 1. INITIALIZE LOCAL STOCKFISH WORKER
   // ----------------------------------------------------------------
   useEffect(() => {
-    // pointing to the file in public/stockfish/
-    stockfishRef.current = new Worker('/stockfish/stockfish-17.1-lite-single-03e3232.js');
+    // Make sure this filename matches your actual single-threaded file!
+    stockfishRef.current = new Worker('/stockfish/stockfish-17.1-lite-single-03e3232.js'); 
     
     stockfishRef.current.postMessage('uci');
-    // Set MultiPV to 3 to get top 3 moves
+    // This tells Stockfish to always look for the top 3 lines
     stockfishRef.current.postMessage('setoption name MultiPV value 3'); 
 
     return () => {
@@ -51,76 +51,51 @@ export function ChessAiTutor({
     return new Promise((resolve) => {
       const worker = stockfishRef.current;
       if (!worker) {
-        resolve("Analysis unavailable (engine not loaded).");
+        resolve("Analysis unavailable.");
         return;
       }
 
-      let topLines: string[] = [];
+      // Map<MultiPV_Index, Raw_Info_String>
+      const topLines = new Map<number, string>();
 
-      // Listener for this specific analysis run
       const handler = (e: MessageEvent) => {
         const msg = e.data;
 
-        // We look for 'info' lines that have 'pv' (principal variation)
-        // and are at a decent depth (e.g., depth 15 is fast and good enough for beginners)
+        // 1. Capture "info" lines with "pv" (Principal Variation)
         if (msg.startsWith('info') && msg.includes('pv')) {
-            // Simple parsing to store the latest info lines
-            // In a real app, you might parse 'multipv' index to ensure you have distinct lines
-            // but for simplicity, we just capture the string here.
-            
-            // We stop listening when we get the 'bestmove' command
+          const multipvMatch = msg.match(/multipv (\d+)/);
+          const lineIndex = multipvMatch ? parseInt(multipvMatch[1]) : 1;
+          topLines.set(lineIndex, msg);
         }
 
+        // 2. Finish on "bestmove"
         if (msg.startsWith('bestmove')) {
           worker.removeEventListener('message', handler);
           
-          // Formatting the captured lines into a readable string for the LLM
-          // Note: In a production app, you'd want to parse the specific 'score' and 'pv' 
-          // from the 'info' messages stored in `topLines`.
-          // For now, we will request a simple evaluation.
-          resolve(topLines.join('\n')); 
+          // 3. Format ONLY the moves (no scores)
+          const formattedAnalysis = Array.from(topLines.values())
+            .sort((a, b) => {
+              // Ensure Line 1 (best) comes first
+              const idxA = parseInt(a.match(/multipv (\d+)/)?.[1] || '999');
+              const idxB = parseInt(b.match(/multipv (\d+)/)?.[1] || '999');
+              return idxA - idxB;
+            })
+            .map((line, index) => {
+              // Extract the move sequence
+              const pvMatch = line.match(/ pv (.*?)$/);
+              // Take the first 4 moves of the sequence to give the LLM context
+              const moves = pvMatch ? pvMatch[1].split(' ').slice(0, 4).join(' ') : '';
+              
+              return `Option ${index + 1}: ${moves}`;
+            })
+            .join('\n');
+
+          resolve(formattedAnalysis || "No moves found.");
         }
       };
 
-      // A cleaner approach for the LLM context:
-      // We will collect the output of the engine for 1-2 seconds or until depth 12
-      const lines: Map<number, string> = new Map();
-      
-      worker.onmessage = (e) => {
-        const msg = e.data;
-        // Parse multipv lines: "info depth 10 ... multipv 1 score cp 50 ... pv e2e4 e7e5"
-        if (msg.startsWith('info') && msg.includes('depth') && msg.includes('pv')) {
-            const multipvMatch = msg.match(/multipv (\d+)/);
-            const multipv = multipvMatch ? parseInt(multipvMatch[1]) : 1;
-            
-            // Only update if depth is reasonable (e.g., > 8)
-            lines.set(multipv, msg);
-        }
-
-        if (msg.startsWith('bestmove')) {
-           // Convert raw UCI lines to readable text for LLM
-           const formattedAnalysis = Array.from(lines.values()).map(line => {
-             // Extract Move
-             const pvMatch = line.match(/ pv (.*)/);
-             const moves = pvMatch ? pvMatch[1].split(' ').slice(0, 4).join(' ') : 'unknown';
-             
-             // Extract Score
-             const scoreMatch = line.match(/score cp (-?\d+)/);
-             const mateMatch = line.match(/score mate (-?\d+)/);
-             let score = '0.0';
-             if (mateMatch) score = `Mate in ${mateMatch[1]}`;
-             else if (scoreMatch) score = (parseInt(scoreMatch[1]) / 100).toFixed(2);
-             
-             return `Line: ${moves}... (Eval: ${score})`;
-           }).join('\n');
-
-           resolve(formattedAnalysis || "No clear advantage found.");
-           // Cleanup usually happens here, but we reuse the worker
-        }
-      };
-
+      worker.addEventListener('message', handler);
       worker.postMessage(`position fen ${fen}`);
-      // Depth 15 is fast and plenty strong for a tutor
       worker.postMessage('go depth 15'); 
     });
   };
