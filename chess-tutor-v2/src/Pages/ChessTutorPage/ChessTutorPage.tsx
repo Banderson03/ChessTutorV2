@@ -55,7 +55,7 @@ export function ChessTutorPage() {
                 </div>
             </div>
 
-            {showAnalysis && completedGameMoves.length > 0 && (
+            {showAnalysis && completedGameMoves.length > 0 && false && ( // Analysis is disabled for now
                 <div style={{ marginTop: '30px' }}>
                     <GameAnalysisPanel
                         moves={completedGameMoves}
