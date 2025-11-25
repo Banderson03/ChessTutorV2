@@ -320,8 +320,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    width: '420px',
-    height: '540px',
+    width: '450px',
+    height: '640px',
     backgroundColor: '#f8f9fa',
     borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',

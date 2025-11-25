@@ -324,6 +324,12 @@ export function ChessTutorGame({
         <div style={styles.statusCard} >
           <h2 style={{ ...styles.status, color: statusColor }}>{getGameStatus()}</h2>
         </div>
+        <div style={styles.fenContainer}>
+          <label style={styles.label}>Current FEN:</label>
+          <div style={styles.fenDisplay}>
+            {fen}
+          </div>
+        </div>
 
         <div style={styles.buttonGroup}>
           <button
@@ -386,6 +392,7 @@ export function ChessTutorGame({
             </>
           )}
         </div>
+
       </div>
 
       {/* The Chessboard UI Component */}
@@ -423,7 +430,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'flex-start',
   },
   boardContainer: {
-    width: '500px',
+    width: '600px',
     maxWidth: '90vw',
     backgroundColor: '#4e3a2b',
     padding: '20px',
@@ -431,7 +438,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   controlsContainer: {
-    width: '380px',
+    width: '410px',
     display: 'flex',
     flexDirection: 'column',
     gap: '40px',
@@ -439,10 +446,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '20px',
     backgroundColor: '#4e3a2b',
     borderRadius: '12px',
-    minHeight: '500px'
+    minHeight: '600px'
   },
   status: {
-    fontSize: '1.25rem',
+    fontSize: '1.5rem',
     fontWeight: 'bold',
     textAlign: 'center',
     minHeight: '30px',
@@ -465,7 +472,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   statusCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    marginBottom: '5px',
+    // marginBottom: '5px',
     padding: '10px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
   },
@@ -488,6 +495,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#f0d9b5',
     marginTop: '8px',
     fontWeight: '500',
+  },
+  fenContainer: {
+    // marginTop: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  fenDisplay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: '8px',
+    borderRadius: '6px',
+    color: '#f0d9b5',
+    fontSize: '0.68rem',
+    fontFamily: 'monospace',
+    wordBreak: 'break-all',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
   }
 };
 

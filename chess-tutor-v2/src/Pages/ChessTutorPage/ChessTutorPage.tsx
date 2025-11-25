@@ -18,7 +18,7 @@ export function ChessTutorPage() {
 
     return (
         <div style={{ padding: '20px' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '30px', marginLeft: '35px' }}>The Chess Tutor</h1>
+            <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>The Chess Tutor</h1>
 
             {/* MAIN LAYOUT CONTAINER */}
             <div style={{
@@ -45,7 +45,7 @@ export function ChessTutorPage() {
 
                 {/* 2. The AI Tutor */}
                 <div style={{
-                    width: '380px',
+                    width: '450px',
                     flexShrink: 0, // Keeps the tutor width fixed
                 }}>
                     <ChessAiTutor
