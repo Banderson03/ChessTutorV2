@@ -446,10 +446,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '20px',
     backgroundColor: '#4e3a2b',
     borderRadius: '12px',
-    minHeight: '600px'
+    minHeight: '600px',
+    maxHeight: '600px',
   },
   status: {
-    fontSize: '1.5rem',
+    fontSize: '1.3rem',
     fontWeight: 'bold',
     textAlign: 'center',
     minHeight: '30px',
@@ -472,7 +473,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   statusCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    // marginBottom: '5px',
+    marginBottom: '-20px',
     padding: '10px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
   },
@@ -480,10 +481,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '10px',
+    marginBottom: '5px',
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     padding: '8px 12px',
     borderRadius: '8px',
+    marginTop: '-5px',
   },
   segmentedControl: {
     display: 'flex',

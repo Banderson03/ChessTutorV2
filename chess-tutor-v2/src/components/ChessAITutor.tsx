@@ -295,7 +295,7 @@ export function ChessAiTutor({
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Ask anything about the chess game!"
+          placeholder="Ask anything about the game!"
           style={styles.input}
           disabled={isLoading}
 
@@ -371,6 +371,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: '85%',
     wordWrap: 'break-word',
     animation: 'fadeIn 0.3s ease-in',
+    fontSize: '0.60rem',
   },
   userMessage: {
     alignSelf: 'flex-end',
@@ -388,11 +389,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: '6px',
-    fontSize: '0.85rem',
+    fontSize: '0.65rem',
     opacity: 0.8,
   },
   timestamp: {
-    fontSize: '0.75rem',
+    fontSize: '0.65rem',
     fontWeight: 'normal',
   },
   messageContent: {
@@ -422,7 +423,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   input: {
     flex: 1,
     padding: '12px 16px',
-    fontSize: '1rem',
+    fontSize: '0.8rem',
     border: '1px solid #ddd',
     borderRadius: '8px',
     outline: 'none',
