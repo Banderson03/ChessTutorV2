@@ -3,6 +3,7 @@ import { Chessboard } from 'react-chessboard';
 import { Chess, Move } from 'chess.js'; // Logic, state, and type import
 // @ts-ignore: no type declarations available for 'js-chess-engine'
 import { Game as AiGame } from 'js-chess-engine'; // The AI engine
+import '../App.css'; // Import the CSS file
 
 interface ChessTutorGameProps {
   game: Chess;
@@ -11,7 +12,7 @@ interface ChessTutorGameProps {
   setFen: (fen: string) => void;
   actualMovesPlayed: string[];
   setActualMovesPlayed: React.Dispatch<React.SetStateAction<string[]>>;
-  onGameComplete?: (moves: string[]) => void; // Changed to pass moves array
+  onGameComplete?: (moves: string[]) => void;
 }
 
 /**
@@ -19,25 +20,18 @@ interface ChessTutorGameProps {
  * It integrates react-chessboard (UI), chess.js (logic),
  * and js-chess-engine (AI) to provide all the requested features.
  */
-export function ChessTutorGame({ 
-  game, 
-  setGame, 
-  fen, 
+export function ChessTutorGame({
+  game,
+  setGame,
+  fen,
   setFen,
   actualMovesPlayed,
   setActualMovesPlayed,
-  onGameComplete 
+  onGameComplete
 }: ChessTutorGameProps) {
   // ----------------------------------------------------------------
   // STATE MANAGEMENT
   // ----------------------------------------------------------------
-
-  // Main game state from chess.js. Used for logic, validation, and history.
-//   const [game, setGame] = useState(new Chess());
-
-  // Current FEN string. This is what react-chessboard actually displays.
-  // We keep this separate from 'game' to trigger re-renders properly.
-//   const [fen, setFen] = useState(game.fen());
 
   // The player's current color. 'w' or 'b'.
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
@@ -51,135 +45,111 @@ export function ChessTutorGame({
   // Add this to your state declarations at the top
   const [fenHistory, setFenHistory] = useState<string[]>([game.fen()]);
 
+  // Toggle for AI opponent
+  const [isAiEnabled, setIsAiEnabled] = useState(true);
+
   // ----------------------------------------------------------------
   // CORE GAME LOGIC
   // ----------------------------------------------------------------
 
   /**
    * This function is called when it's the AI's turn to move.
-   * It uses js-chess-engine to calculate a move based on the
-   * current difficulty and FEN.
    */
   const makeAiMove = useCallback(() => {
-    // 1. Create a new AI game instance using the current FEN.
     const aiGame = new AiGame(game.fen());
-
-    // 2. Get the AI's move. This might be {'g8': 'f6'}, {}, or null.
     const aiMoveObject = aiGame.aiMove(difficulty);
 
-    // ----------------------------------------------------------------
-    // --- THIS IS THE FIX (V4 - Robust Check) ---
-    // ----------------------------------------------------------------
-
-    // 1. Check if the move object itself is valid
     if (!aiMoveObject || Object.keys(aiMoveObject).length === 0) {
       console.warn("AI returned no move. Game is likely over.");
-      return; // Stop if no move was found
+      return;
     }
 
-    // 2. Extract the 'from' and 'to' squares
     const fromSquare = Object.keys(aiMoveObject)[0];
     const toSquare = aiMoveObject[fromSquare];
 
-    // 3. Check if *both* squares are valid strings before calling .toLowerCase()
     if (!fromSquare || !toSquare) {
       console.error("AI returned an invalid/malformed move:", aiMoveObject);
-      return; // Stop if the move object is malformed
+      return;
     }
-    // ----------------------------------------------------------------
-    // --- END FIX ---
-    // ----------------------------------------------------------------
 
-    // 4. Now we are safe. Create the move object for chess.js.
     const moveForChessJs = {
       from: fromSquare.toLowerCase(),
       to: toSquare.toLowerCase(),
-      promotion: 'q', // Always promote to queen for simplicity
+      promotion: 'q',
     };
 
-    // 5. Apply this move to our main chess.js instance.
     const gameCopy = new Chess(game.fen());
-    const moveResult = gameCopy.move(moveForChessJs);
+    try {
+      const moveResult = gameCopy.move(moveForChessJs);
 
-    if (moveResult) {
-      // 6. Update our game state and FEN.
-      setGame(gameCopy);
-      setFen(gameCopy.fen());
-      setFenHistory(prev => [...prev, gameCopy.fen()]);
-      setRedoStack([]);
-      setActualMovesPlayed(prev => [...prev, moveResult.san]);
-    } else {
-      // This should not happen now, but it's a good safety log.
-      console.error(
-        "AI move was rejected by chess.js as invalid:",
-        moveForChessJs
-      );
+      if (moveResult) {
+        setGame(gameCopy);
+        setFen(gameCopy.fen());
+        setFenHistory(prev => [...prev, gameCopy.fen()]);
+        setRedoStack([]);
+        setActualMovesPlayed(prev => [...prev, moveResult.san]);
+      }
+    } catch (e) {
+      console.error("AI move failed or was illegal:", moveForChessJs, e);
     }
   }, [game, difficulty, setActualMovesPlayed]);
 
   /**
-   * This useEffect hook is the main game loop.
-   * It runs whenever the FEN or playerColor changes.
-   * It checks if it's the AI's turn and, if so, triggers its move.
+   * Main game loop for AI moves.
    */
   useEffect(() => {
     if (game.isGameOver()) {
-      // Game just ended, pass the actual moves played for analysis
       if (onGameComplete) {
         onGameComplete(actualMovesPlayed);
       }
       return;
     }
 
-    if (!game.isGameOver() && game.turn() !== playerColor) {
+    if (!game.isGameOver() && game.turn() !== playerColor && isAiEnabled) {
       const timer = setTimeout(() => {
         makeAiMove();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [fen, playerColor, game, makeAiMove, onGameComplete, actualMovesPlayed]);
+  }, [fen, playerColor, game, makeAiMove, onGameComplete, actualMovesPlayed, isAiEnabled]);
 
   /**
-   * This handler is called by react-chessboard when the
-   * *human player* makes a move by dragging a piece.
+   * Handles piece drop
    */
   function onPieceDrop(sourceSquare: string, targetSquare: string): boolean {
-    // 1. Check if it's even the player's turn.
-    if (game.turn() !== playerColor) {
+    // If AI is enabled and it's not player's turn, block move
+    if (isAiEnabled && game.turn() !== playerColor) {
       return false;
     }
 
-    // 2. Create a copy of the game to safely try the move.
     const gameCopy = new Chess(game.fen());
+    try {
+      const move = gameCopy.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q',
+      });
 
-    // 3. Try to make the move. Default to queen promotion.
-    const move = gameCopy.move({
-      from: sourceSquare,
-      to: targetSquare,
-      promotion: 'q',
-    });
+      if (move === null) {
+        return false;
+      }
 
-    // 4. If the move is illegal, chess.js returns null.
-    if (move === null) {
-      return false; // Tell react-chessboard the move was invalid.
+      setGame(gameCopy);
+      setFen(gameCopy.fen());
+      setFenHistory(prev => [...prev, gameCopy.fen()]);
+      setRedoStack([]);
+      setActualMovesPlayed(prev => [...prev, move.san]);
+
+      return true;
+    } catch (e) {
+      return false;
     }
-
-    setGame(gameCopy);
-    setFen(gameCopy.fen());
-    setFenHistory(prev => [...prev, gameCopy.fen()]);
-    setRedoStack([]);
-    setActualMovesPlayed(prev => [...prev, move.san]);
-
-    return true; // Tell react-chessboard the move was successful.
   }
 
   // ----------------------------------------------------------------
   // FEATURE HANDLERS (BUTTONS, ETC.)
   // ----------------------------------------------------------------
 
-  /**
-   * Starts a completely new game.
-   */
   function handleNewGame() {
     const newGame = new Chess();
     setGame(newGame);
@@ -190,70 +160,43 @@ export function ChessTutorGame({
     setActualMovesPlayed([]);
   }
 
-  /**
-   * Undoes the last two moves (player + AI).
-   */
   function handleUndo() {
-    // Need at least 3 positions to undo (initial + player move + AI move)
     if (fenHistory.length <= 2) return;
-    
-    // Go back two moves (player + AI)
+
     const previousFen = fenHistory[fenHistory.length - 3];
     const newGame = new Chess(previousFen);
-    
-    // Store the two undone positions in the redo stack
+
     const movedUndone = [
-        fenHistory[fenHistory.length - 1], // AI move
-        fenHistory[fenHistory.length - 2], // Player move
+      fenHistory[fenHistory.length - 1], // AI move
+      fenHistory[fenHistory.length - 2], // Player move
     ];
-    
+
     setRedoStack(prev => [...movedUndone, ...prev]);
     setFenHistory(prev => prev.slice(0, -2));
     setGame(newGame);
     setFen(previousFen);
-}
+  }
 
-  /**
-   * Redoes the last two moves (player + AI).
-   */
   function handleRedo() {
-    // Need at least 2 positions in the redo stack (player + AI moves)
     if (redoStack.length < 2) return;
-    
-    // Get the two moves to redo
+
     const [aiMove, playerMove, ...remainingStack] = redoStack;
-    
-    // Restore the position after both moves
     const newGame = new Chess(aiMove);
-    
+
     setGame(newGame);
     setFen(aiMove);
     setFenHistory(prev => [...prev, playerMove, aiMove]);
     setRedoStack(remainingStack);
   }
 
-  /**
-   * Swaps sides. The player takes over the AI's pieces
-   * and the AI takes over the player's.
-   */
   function handleSwapSides() {
     setPlayerColor(playerColor === 'w' ? 'b' : 'w');
-  }
-
-  /**
-   * Handles the selection change from the difficulty dropdown.
-   */
-  function handleDifficultyChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setDifficulty(Number(e.target.value));
   }
 
   // ----------------------------------------------------------------
   // HELPER / STATUS FUNCTIONS
   // ----------------------------------------------------------------
 
-  /**
-   * Generates a status message based on the current game state.
-   */
   function getGameStatus(): string {
     if (game.isCheckmate()) {
       return `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} wins.`;
@@ -274,12 +217,10 @@ export function ChessTutorGame({
   // RENDER (JSX)
   // ----------------------------------------------------------------
 
-  // Set status text color: white when White to move, black when Black to move, otherwise white
-  const statusColor = game.turn() === 'w' ? 'white' : game.turn() === 'b' ? 'black' : 'white';
+  const statusColor = game.isCheckmate() ? 'green' : game.isStalemate() ? 'yellow' : game.inCheck() ? 'red' : game.turn() === 'w' ? 'white' : game.turn() === 'b' ? 'black' : 'white';
 
   return (
     <div style={styles.container}>
-      
 
       {/* The Control Panel */}
       <div style={styles.controlsContainer}>
@@ -289,61 +230,82 @@ export function ChessTutorGame({
 
         <div style={styles.buttonGroup}>
           <button
-            style={styles.button}
+            className="chess-btn chess-btn-primary"
             onClick={handleUndo}
-            disabled={fenHistory.length <= 2} // Changed from game.history().length === 0
+            disabled={fenHistory.length <= 2}
           >
             Undo
           </button>
           <button
-            style={styles.button}
+            className="chess-btn chess-btn-primary"
             onClick={handleRedo}
             disabled={redoStack.length === 0}
           >
             Redo
           </button>
-          <button style={styles.button} onClick={handleNewGame}>
+          <button className="chess-btn chess-btn-primary" onClick={handleNewGame}>
             New Game
           </button>
-          <button style={styles.button} onClick={handleSwapSides}>
+          <button className="chess-btn chess-btn-primary" onClick={handleSwapSides}>
             Swap Sides<br></br>(Play as {playerColor === 'w' ? 'Black' : 'White'})
           </button>
         </div>
 
         <div style={styles.difficultyControl}>
-          <label htmlFor="difficulty" style={styles.label}>
-            AI Difficulty:
-          </label>
-          <select
-            id="difficulty"
-            value={difficulty}
-            onChange={handleDifficultyChange}
-            style={styles.select}
-          >
-            <option value={0}>Level 0 (Beginner)</option>
-            <option value={1}>Level 1 (Easy)</option>
-            <option value={2}>Level 2 (Medium)</option>
-            <option value={3}>Level 3 (Hard)</option>
-            <option value={4}>Level 4 (Expert)</option>
-          </select>
+          <div style={styles.toggleContainer}>
+            <label style={styles.label}>AI Opponent:</label>
+            <button
+              className="chess-btn chess-toggle-btn"
+              style={{
+                backgroundColor: isAiEnabled ? '#27ae60' : '#95a5a6',
+              }}
+              onClick={() => setIsAiEnabled(!isAiEnabled)}
+            >
+              {isAiEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          {isAiEnabled && (
+            <>
+              <label style={styles.label}>AI Difficulty:</label>
+              <div style={styles.segmentedControl}>
+                {[0, 1, 2, 3, 4].map((level) => (
+                  <button
+                    key={level}
+                    className="chess-btn chess-segment-btn"
+                    style={{
+                      backgroundColor: difficulty === level ? '#b58863' : '#e0e0e0',
+                      color: difficulty === level ? 'white' : '#333',
+                    }}
+                    onClick={() => setDifficulty(level)}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+              <div style={styles.difficultyLabel}>
+                {['Beginner', 'Easy', 'Medium', 'Hard', 'Expert'][difficulty]}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* The Chessboard UI Component */}
       <div style={styles.boardContainer}>
         <Chessboard
-        options = {{
-          id: "ChessTutorBoard",
-          position: fen,
-          onPieceDrop: ({ sourceSquare, targetSquare }) => {
-            if (!sourceSquare || !targetSquare) return false;
-            return onPieceDrop(sourceSquare, targetSquare);
-          },
-          // Flip the board when the player swaps sides. chessboard expects
-          // the strings "white" or "black"; our state uses 'w'|'b'.
-          boardOrientation: playerColor === 'w' ? 'white' : 'black',
-        }}
-      />
+          options={{
+            id: "ChessTutorBoard",
+            position: fen,
+            onPieceDrop: ({ sourceSquare, targetSquare }) => {
+              if (!sourceSquare || !targetSquare) return false;
+              return onPieceDrop(sourceSquare, targetSquare);
+            },
+            // Flip the board when the player swaps sides. chessboard expects
+            // the strings "white" or "black"; our state uses 'w'|'b'.
+            boardOrientation: playerColor === 'w' ? 'white' : 'black',
+          }}
+        />
       </div>
     </div>
   );
@@ -351,21 +313,18 @@ export function ChessTutorGame({
 
 // ----------------------------------------------------------------
 // STYLING
-// (Just some basic CSS-in-JS to make it look nice)
 // ----------------------------------------------------------------
-
-// In ChessTutorGame.tsx
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',
     flexDirection: 'row',
     fontFamily: 'sans-serif',
-    gap: '30px',              // Increased gap for better separation
+    gap: '30px',
     alignItems: 'flex-start',
   },
   boardContainer: {
-    width: '500px',           // Board stays fixed
+    width: '500px',
     maxWidth: '90vw',
     backgroundColor: '#4e3a2b',
     padding: '20px',
@@ -373,8 +332,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   controlsContainer: {
-    // 1. MATCH WIDTH: This must match the width of the AI Tutor exactly
-    width: '380px',           
+    width: '380px',
     display: 'flex',
     flexDirection: 'column',
     gap: '40px',
@@ -393,41 +351,45 @@ const styles: { [key: string]: React.CSSProperties } = {
   buttonGroup: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '10px',
-  },
-  button: {
-    padding: '12px',
-    fontSize: '1.25rem',
-    fontWeight: 'bold',
-    border: 'none',
-    borderRadius: '4px',
-    backgroundColor: '#b58863',
-    color: 'white',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
+    gap: '12px',
   },
   difficultyControl: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '12px',
   },
   label: {
     fontSize: '1rem',
     fontWeight: '600',
-  },
-  select: {
-    padding: '10px',
-    fontSize: '1rem',
-    borderRadius: '4px',
-    border: '1px solid #ccc',
-    backgroundColor: '#b58863'
+    color: '#f0d9b5',
   },
   statusCard: {
-    backgroundColor: '#b58863',
-    borderRadius: '4px',
-    marginBottom: '20px'
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: '8px',
+    marginBottom: '20px',
+    padding: '10px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+  },
+  toggleContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: '8px 12px',
+    borderRadius: '8px',
+  },
+  segmentedControl: {
+    display: 'flex',
+    gap: '4px',
+  },
+  difficultyLabel: {
+    textAlign: 'center',
+    fontSize: '0.9rem',
+    color: '#f0d9b5',
+    marginTop: '8px',
+    fontWeight: '500',
   }
 };
 
-// Add this line if you're using this as a module
 export default ChessTutorGame;
