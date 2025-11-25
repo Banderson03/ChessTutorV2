@@ -17,20 +17,29 @@ export function ChessTutorPage() {
     };
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>The Chess Tutor</h1>
+        <div style={{
+            padding: '20px',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 'max(16px, 1vw)' // Responsive base font size
+        }}>
+            <h1 style={{ textAlign: 'center', marginBottom: '2vh' }}>The Chess Tutor</h1>
 
             {/* MAIN LAYOUT CONTAINER */}
             <div style={{
                 display: 'flex',
                 flexDirection: 'row',
-                alignItems: 'flex-start',
-                justifyContent: 'center', // Centers the whole group
-                gap: '20px'
+                alignItems: 'flex-start', // Align top so they grow down
+                justifyContent: 'center',
+                gap: '2vw',
+                width: '100%',
+                maxWidth: '95vw',
             }}>
 
                 {/* 1. The Game (Controls + Board) */}
-                {/* We use flex-shrink-0 to prevent the board from crushing if screen is tight */}
                 <div style={{ flexShrink: 0 }}>
                     <ChessTutorGame
                         game={game}
@@ -45,8 +54,8 @@ export function ChessTutorPage() {
 
                 {/* 2. The AI Tutor */}
                 <div style={{
-                    width: '450px',
-                    flexShrink: 0, // Keeps the tutor width fixed
+                    flexShrink: 0,
+                    // Width handled by component
                 }}>
                     <ChessAiTutor
                         currentFen={fen}

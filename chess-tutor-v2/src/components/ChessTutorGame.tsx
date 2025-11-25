@@ -430,15 +430,20 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'flex-start',
   },
   boardContainer: {
-    width: '600px',
-    maxWidth: '90vw',
+    width: '65vh', // Reduced from 70vh
+    height: '65vh',
+    maxWidth: '60vw',
     backgroundColor: '#4e3a2b',
     padding: '20px',
     borderRadius: '12px',
     flexShrink: 0,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   controlsContainer: {
-    width: '410px',
+    width: '25rem', // Use rem to scale with font size
+    minWidth: '300px',
     display: 'flex',
     flexDirection: 'column',
     gap: '40px',
@@ -446,7 +451,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '20px',
     backgroundColor: '#4e3a2b',
     borderRadius: '12px',
-    minHeight: '600px'
+    minHeight: '65vh' // Match board height roughly
   },
   status: {
     fontSize: '1.5rem',
