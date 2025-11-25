@@ -11,9 +11,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -22,6 +24,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -54,11 +57,13 @@
 }
 
 .chess-btn:focus {
-  outline: none; /* Remove default browser outline */
+  outline: none;
+  /* Remove default browser outline */
 }
 
 .chess-btn:active {
-  transform: scale(0.95); /* Click effect */
+  transform: scale(0.95);
+  /* Click effect */
 }
 
 /* Primary Action Buttons (Undo, Redo, etc.) */
@@ -114,4 +119,37 @@
 
 .chess-segment-btn:hover:not(:disabled) {
   filter: brightness(1.1);
+}
+
+/* Green Action Button (Get Hint) */
+.chess-btn-green {
+  background-color: #27ae60;
+  color: white;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.chess-btn-green:hover {
+  background-color: #219150;
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.chess-btn-green:active {
+  transform: scale(0.95) translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chess-btn-green:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
 }

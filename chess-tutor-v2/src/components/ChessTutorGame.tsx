@@ -419,7 +419,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexDirection: 'row',
     fontFamily: 'sans-serif',
-    gap: '30px',
+    gap: '20px',
     alignItems: 'flex-start',
   },
   boardContainer: {
@@ -465,7 +465,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   statusCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    marginBottom: '20px',
+    marginBottom: '5px',
     padding: '10px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
   },

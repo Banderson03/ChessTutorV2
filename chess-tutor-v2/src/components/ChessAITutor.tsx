@@ -21,10 +21,10 @@ export function ChessAiTutor({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Ref to hold the worker instance
   const stockfishRef = useRef<Worker | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -33,11 +33,11 @@ export function ChessAiTutor({
   // ----------------------------------------------------------------
   useEffect(() => {
     // Make sure this filename matches your actual single-threaded file!
-    stockfishRef.current = new Worker('/stockfish/stockfish-17.1-lite-single-03e3232.js'); 
-    
+    stockfishRef.current = new Worker('/stockfish/stockfish-17.1-lite-single-03e3232.js');
+
     stockfishRef.current.postMessage('uci');
     // This tells Stockfish to always look for the top 3 lines
-    stockfishRef.current.postMessage('setoption name MultiPV value 3'); 
+    stockfishRef.current.postMessage('setoption name MultiPV value 3');
 
     return () => {
       stockfishRef.current?.terminate();
@@ -71,7 +71,7 @@ export function ChessAiTutor({
         // 2. Finish on "bestmove"
         if (msg.startsWith('bestmove')) {
           worker.removeEventListener('message', handler);
-          
+
           // 3. Format ONLY the moves (no scores)
           const formattedAnalysis = Array.from(topLines.values())
             .sort((a, b) => {
@@ -85,7 +85,7 @@ export function ChessAiTutor({
               const pvMatch = line.match(/ pv (.*?)$/);
               // Take the first 4 moves of the sequence to give the LLM context
               const moves = pvMatch ? pvMatch[1].split(' ').slice(0, 4).join(' ') : '';
-              
+
               return `Option ${index + 1}: ${moves}`;
             })
             .join('\n');
@@ -96,7 +96,7 @@ export function ChessAiTutor({
 
       worker.addEventListener('message', handler);
       worker.postMessage(`position fen ${fen}`);
-      worker.postMessage('go depth 15'); 
+      worker.postMessage('go depth 15');
     });
   };
 
@@ -119,14 +119,14 @@ export function ChessAiTutor({
           turn: game.turn(),
           inCheck: game.inCheck(),
           // PASS THE LOCAL ANALYSIS HERE
-          stockfishAnalysis: stockfishAnalysis 
+          stockfishAnalysis: stockfishAnalysis
         }),
       });
 
       if (!response.ok) throw new Error('Failed to get analysis');
 
       const data = await response.json();
-      
+
       setMessages((prev) => [...prev, {
         role: 'assistant',
         content: data.message,
@@ -169,9 +169,8 @@ export function ChessAiTutor({
           messages: [
             {
               role: 'system',
-              content: `You are an expert chess tutor. The current position is: ${currentFen}. The player is ${
-                game.turn() === 'w' ? 'White' : 'Black'
-              } to move. Answer questions clearly and educationally, keeping responses under 150 words unless a detailed explanation is specifically requested.`,
+              content: `You are an expert chess tutor. The current position is: ${currentFen}. The player is ${game.turn() === 'w' ? 'White' : 'Black'
+                } to move. Answer questions clearly and educationally, keeping responses under 150 words unless a detailed explanation is specifically requested.`,
             },
             ...messages.slice(-6).map((m) => ({ role: m.role, content: m.content })),
             { role: 'user', content: message },
@@ -237,11 +236,11 @@ export function ChessAiTutor({
       <div style={styles.header}>
         <h3 style={styles.title}>Chess Tutor AI</h3>
         <button
-          style={styles.hintButton}
+          className="chess-btn chess-btn-green"
           onClick={handleHintRequest}
-          disabled={isLoading} // Updated
+          disabled={isLoading}
         >
-          {isLoading ? 'Thinking...' : '💡 Get Hint'} 
+          {isLoading ? 'Thinking...' : '💡 Get Hint'}
         </button>
       </div>
 
@@ -296,14 +295,14 @@ export function ChessAiTutor({
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Ask about chess strategies, tactics, openings..."
+          placeholder="Ask anything about the chess game!"
           style={styles.input}
           disabled={isLoading}
-          
+
         />
         <button
           type="submit"
-          style={styles.sendButton}
+          className="chess-btn chess-btn-primary"
           disabled={isLoading || !inputValue.trim()}
         >
           Send
@@ -428,7 +427,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
     outline: 'none',
     backgroundColor: '#dba477',
-    color: 'black' 
+    color: 'black'
   },
   sendButton: {
     padding: '12px 24px',
