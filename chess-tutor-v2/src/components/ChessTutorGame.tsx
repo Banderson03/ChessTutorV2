@@ -45,6 +45,10 @@ export function ChessTutorGame({
   // Add this to your state declarations at the top
   const [fenHistory, setFenHistory] = useState<string[]>([game.fen()]);
 
+  // Move highlighting state
+  const [moveFrom, setMoveFrom] = useState('');
+  const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
+
   // Toggle for AI opponent
   const [isAiEnabled, setIsAiEnabled] = useState(true);
 
@@ -114,6 +118,95 @@ export function ChessTutorGame({
   }, [fen, playerColor, game, makeAiMove, onGameComplete, actualMovesPlayed, isAiEnabled]);
 
   /**
+   * Get the move options for a square to show valid moves
+   */
+  function getMoveOptions(square: string) {
+    const moves = game.moves({
+      square: square as any,
+      verbose: true
+    });
+
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return false;
+    }
+
+    const newSquares: Record<string, React.CSSProperties> = {};
+    moves.map((move) => {
+      newSquares[move.to] = {
+        background:
+          game.get(move.to as any) && game.get(move.to as any)?.color !== game.get(square as any)?.color
+            ? 'radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)'
+            : 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)',
+        borderRadius: '50%',
+      };
+      return move;
+    });
+
+    newSquares[square] = {
+      background: 'rgba(255, 255, 0, 0.4)',
+    };
+
+    setOptionSquares(newSquares);
+    return true;
+  }
+
+  /**
+   * Handles square click for move highlighting and click-to-move
+   */
+  function onSquareClick({ square }: { square: string }) {
+    // If AI is enabled and it's not player's turn, block interaction
+    if (isAiEnabled && game.turn() !== playerColor) {
+      return;
+    }
+
+    // If we have a piece selected (moveFrom) and click another square
+    if (!moveFrom) {
+      // We are selecting a piece
+      const hasMoveOptions = getMoveOptions(square);
+      if (hasMoveOptions) setMoveFrom(square);
+      return;
+    }
+
+    // We have a piece selected, and we clicked a target square
+    // 1. Attempt to move
+    const gameCopy = new Chess(game.fen());
+    try {
+      const move = gameCopy.move({
+        from: moveFrom,
+        to: square,
+        promotion: 'q', // always promote to queen for simplicity
+      });
+
+      // If move is valid
+      if (move) {
+        setGame(gameCopy);
+        setFen(gameCopy.fen());
+        setFenHistory(prev => [...prev, gameCopy.fen()]);
+        setRedoStack([]);
+        setActualMovesPlayed(prev => [...prev, move.san]);
+
+        // Clear highlights
+        setMoveFrom('');
+        setOptionSquares({});
+        return;
+      }
+    } catch (e) {
+      // Invalid move or error
+    }
+
+    // 2. If move failed, check if we clicked on a different piece of our own to switch selection
+    const hasMoveOptions = getMoveOptions(square);
+    if (hasMoveOptions) {
+      setMoveFrom(square);
+    } else {
+      // Clicked on empty square or invalid spot, clear selection
+      setMoveFrom('');
+      setOptionSquares({});
+    }
+  }
+
+  /**
    * Handles piece drop
    */
   function onPieceDrop(sourceSquare: string, targetSquare: string): boolean {
@@ -139,6 +232,10 @@ export function ChessTutorGame({
       setFenHistory(prev => [...prev, gameCopy.fen()]);
       setRedoStack([]);
       setActualMovesPlayed(prev => [...prev, move.san]);
+
+      // Clear highlights on drop
+      setMoveFrom('');
+      setOptionSquares({});
 
       return true;
     } catch (e) {
@@ -304,6 +401,8 @@ export function ChessTutorGame({
             // Flip the board when the player swaps sides. chessboard expects
             // the strings "white" or "black"; our state uses 'w'|'b'.
             boardOrientation: playerColor === 'w' ? 'white' : 'black',
+            squareStyles: optionSquares,
+            onSquareClick: onSquareClick,
           }}
         />
       </div>
