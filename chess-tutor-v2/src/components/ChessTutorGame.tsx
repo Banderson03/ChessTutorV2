@@ -472,7 +472,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   statusCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    // marginBottom: '5px',
+    marginBottom: '-17.44px',
     padding: '10px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
   },
@@ -507,7 +507,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '8px',
     borderRadius: '6px',
     color: '#f0d9b5',
-    fontSize: '0.68rem',
+    fontSize: '1.0rem',
     fontFamily: 'monospace',
     wordBreak: 'break-all',
     border: '1px solid rgba(255, 255, 255, 0.1)',
